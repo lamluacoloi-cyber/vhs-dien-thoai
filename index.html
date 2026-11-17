@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vận hành sàn</title>
 <style>
-/* Trang điện thoại app Lấy data ngày Sàn TMĐT (v21) — 5 menu đáy: Phân tích · Quảng cáo · Hộp thư · Sổ lệnh · Kết nối */
+/* Trang điện thoại app Lấy data ngày Sàn TMĐT (v21; v43: GMV 7 ngày gần nhất + Data 7 ngày + ⟳ Tải đủ file thiếu) — 5 menu đáy: Phân tích · Quảng cáo · Hộp thư · Sổ lệnh · Kết nối */
 :root{--bg:#f3f5f2;--card:#fff;--line:#dde3dd;--fg:#1d2a20;--mut:#5f6d62;--acc:#15803d;--acc-soft:#e3f2e8;--ok:#15803d;
  --warn:#b7791f;--warn-soft:#fdf3dc;--bad:#c0392b;--bad-soft:#fbe5e2;--gray:#8a948c;
  --s1:#15803d;--s2:#5fb67f;--s3:#b9dcc4;--s4:#0f5a2b;--s5:#8fcca4;--s6:#dcefe2;
@@ -116,6 +116,29 @@ textarea{font:inherit;font-size:14px;width:100%;min-height:72px;border:1px solid
 .thead button.on{border-color:var(--acc);color:var(--acc);font-weight:700}
 .tu{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px}
 .tu input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:7px;padding:4px 6px;background:var(--card);color:var(--fg)}
+/* v43 · 7 ngày gần nhất + Data 7 ngày (demo_dt_7ngay_data_thieu_v43.html) */
+.bl span.cn{color:var(--bad);font-weight:700}
+.bt{border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.bt.do{background:var(--bad-soft);border:1px solid #f0b7b0}.bt.vg{background:var(--warn-soft);border:1px solid #f1d590}.bt.xa{background:var(--acc-soft);border:1px solid #a7dcb8}
+.bt b.t{font-size:15px}
+.bt.do b.t{color:var(--bad)}.bt.vg b.t{color:var(--warn)}.bt.xa b.t{color:var(--ok)}
+.sh{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.dth details:last-child .sh,.dth .sh:last-child{border-bottom:0}
+.sh .k{font-weight:700;white-space:nowrap}
+.sh .sm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dth details summary{cursor:pointer;list-style:none}
+.dth details summary::-webkit-details-marker{display:none}
+.lw{display:grid;grid-template-columns:34px repeat(7,1fr);gap:3px;font-size:10.5px;margin:6px 0 8px;font-variant-numeric:tabular-nums}
+.lw .h{color:var(--mut);text-align:center}.lw .h.cn{color:var(--bad);font-weight:700}
+.lw .m{font-weight:700;color:var(--mut);align-self:center}
+.lw .o{height:18px;border-radius:3px;background:#86d19e;text-align:center;font-size:11px;line-height:18px}
+.lw .o.t{background:#ef4444}
+.lw .o.l{background:#7f1d1d}
+.lw .o.s{background:#ef4444;color:#fde68a}
+.lw .o.d{background:repeating-linear-gradient(45deg,#fbbf24 0 4px,#fde68a 4px 8px)}
+.lw .o.n{background:var(--line)}
+.prog{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:2px 0 6px}
+.prog i{display:block;height:100%;background:var(--acc)}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
@@ -124,7 +147,7 @@ textarea{font:inherit;font-size:14px;width:100%;min-height:72px;border:1px solid
 <main id="body"><div class="trong">Đang tải hiện trạng từ Sheet…</div></main>
 <div class="toast" id="toast"></div>
 <nav id="nav">
- <button data-t="pt" class="on"><span class="i">▤</span>Phân tích</button>
+ <button data-t="pt" class="on"><span class="i">▤</span>Phân tích<span class="badge" id="b_pt" hidden></span></button>
  <button data-t="qc"><span class="i">●</span>Quảng cáo</button>
  <button data-t="ht"><span class="i">✉</span>Hộp thư<span class="badge" id="b_ht" hidden></span></button>
  <button data-t="sl"><span class="i">☰</span>Sổ lệnh<span class="badge" id="b_sl" hidden></span></button>
@@ -184,7 +207,7 @@ function hoiMatKhau(m) {
 const TEN = {pt:'Phân tích', qc:'Quảng cáo', ht:'Hộp thư', sl:'Sổ lệnh', kn:'Kết nối'};
 const TT_LENH = {'chờ':['Chờ máy nhận','g'],'đã nhận':['Máy đã nhận','g'],'đang làm':['Máy đang làm','g'],'xong':['Xong','ok'],
   'lỗi':['Lỗi','b'],'từ chối':['Máy từ chối','w'],'hết hạn':['Hết hạn','w']};
-let S = {tab:'pt', loc:'Tất cả', htm:'tq', ngay:-1, khach:null, ls:{}, cho:{}, ky:'rt', shop:'Tất cả', xep:'gmv', mo:-1, tc:null, rtCho:null};
+let S = {tab:'pt', loc:'Tất cả', htm:'tq', ngay:-1, khach:null, ls:{}, cho:{}, ky:'rt', shop:'Tất cả', xep:'gmv', mo:-1, tc:null, rtCho:null, moTh:{}};
 let G = null, D = null, MAY = '', LUC = null, TRE = 0, LENH = [];
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -200,8 +223,8 @@ function hoi(msg, nut, ok) {
   d.innerHTML = `<div class="box"><b>Xác nhận</b><div>${msg}</div><div class="btns"><button class="x" id="cy">${nut || 'Gửi lệnh'}</button><button id="cn">Thôi</button></div></div>`;
   document.body.appendChild(d); d.querySelector('#cn').onclick = () => d.remove(); d.querySelector('#cy').onclick = () => { d.remove(); ok(); };
 }
-function lenh(loai, ts, moTa, sau) {
-  hoi(moTa, 'Gửi lệnh', () => API.goi('dtGuiLenh', [MAY, loai, ts || {}], ma => {
+function lenh(loai, ts, moTa, sau, nut) {
+  hoi(moTa, nut || 'Gửi lệnh', () => API.goi('dtGuiLenh', [MAY, loai, ts || {}], ma => {
     toast('Đã gửi lệnh. Máy nhận trong ≤ 20 giây (máy phải bật, app mở).');
     S.cho[ma] = loai; nhanh(); if (sau) sau(ma);
   }));
@@ -233,6 +256,7 @@ function ve() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === S.tab));
   const sl = D && D.so_lenh && D.so_lenh.tk ? D.so_lenh.tk.cho_duyet : 0;
   dat('#b_sl', sl); dat('#b_ht', D && D.hop_thu && D.hop_thu.tin ? D.hop_thu.tin.filter(canXL).length : 0);
+  const TH = D && D.phan_tich && D.phan_tich.thieu; dat('#b_pt', TH && !TH.loi ? TH.tong || 0 : 0);   // v43: số file thiếu 7 ngày
   let kn = mat ? 1 : 0;
   if (D && D.ket_noi && D.ket_noi.shops) kn += D.ket_noi.shops.filter(s => s.chay && s.tt !== 'ket_noi').length + (D.ket_noi.nhip || []).filter(n => n.tt === 'lo').length;
   dat('#b_kn', kn);
@@ -345,7 +369,93 @@ function veKy() {
    <div class="sm" style="margin-top:4px">GMV triệu đồng · CĐ = đơn SKU / nhấp · xanh 3 cao nhất, đỏ 3 thấp nhất · bấm dòng xem thêm · ${rt ? 'SP hôm nay từ trang Phân tích SP' : 'từ file SP trong kỳ' + (K.k && K.k.thieu_sp ? ' (thiếu file SP ' + K.k.thieu_sp + ' ngày-shop)' : '')}</div></div>`;
   return h;
 }
-function vePT() { return veKy() + `<div class="sub" style="margin:6px 0 0">Tuần này · theo ngày (như trước)</div>` + vePTTuan(); }
+function vePT() { const P = D.phan_tich, bay = P && P.so_ngay;
+  return veKy() + `<div class="sub" style="margin:6px 0 0">${bay ? bay + ' ngày gần nhất' : 'Tuần này'} · theo ngày</div>` + vePTTuan(); }
+/* v43 · Data 7 ngày: cùng luật tab Data thiếu của app (7 mã F1–F6 + SP, bỏ hôm nay, hôm qua trước 07:30 không tính) */
+const MA_TH = ['F1','F2','F3','F4','F5','F6','SP'];
+const nn5 = d => d.slice(8,10) + '/' + d.slice(5,7);
+const laCN = d => new Date(d + 'T00:00:00').getDay() === 0;
+function gomNgay(ds) {
+  const r = []; let a = null, b = null;
+  ds.slice().sort().forEach(d => { if (b && (new Date(d) - new Date(b)) / 864e5 === 1) b = d; else { if (a) r.push([a, b]); a = b = d; } });
+  if (a) r.push([a, b]);
+  return r.map(([x, y]) => x === y ? nn5(x) : x.slice(8,10) + '–' + nn5(y)).join(', ');
+}
+function lenhThieu() {   // lệnh cap_nhat_thieu gần nhất của máy này (trong 3 giờ)
+  const l = (LENH || []).find(x => x.loai === 'cap_nhat_thieu' && x.may === MAY);
+  if (!l || !G) return null;
+  const bg = new Date(G.bay_gio.replace(' ', 'T')), lc = new Date(String(l.luc).replace(' ', 'T'));
+  return (bg - lc) / 60e3 < 180 ? l : null;
+}
+function dangTai(TH, vt, m, d) { const v = TH.dang_tai && TH.dang_tai.viec && TH.dang_tai.viec[vt]; return !!(v && v[d] && v[d].indexOf(m) >= 0); }
+function veLuoiTh(TH, vt, x) {
+  let h = `<div class="lw"><span></span>${TH.ngay.map(d => `<span class="h${laCN(d) ? ' cn' : ''}">${d.slice(8,10)}</span>`).join('')}`;
+  MA_TH.forEach(m => {
+    h += `<span class="m">${m}</span>` + TH.ngay.map(d => {
+      if (TH.ngay_tinh.indexOf(d) < 0) return '<span class="o n" title="chưa tính (trước 7h30)"></span>';
+      const thieu = (x.thieu[m] || []).indexOf(d) >= 0, loi = x.loi[d] && x.loi[d][m], sp = (x.sp_co[d] || []).indexOf(m) >= 0;
+      if (!thieu && !loi) return '<span class="o"></span>';
+      if (thieu && dangTai(TH, vt, m, d)) return '<span class="o d"></span>';
+      if (loi) return `<span class="o l" title="${esc(loi)}"></span>`;
+      return sp ? '<span class="o s">☁</span>' : '<span class="o t"></span>';
+    }).join('');
+  });
+  const loi = Object.entries(x.loi || {}).map(([d, ms]) => Object.entries(ms).map(([m, l]) => `${m} ${nn5(d)}: ${esc(l)}`).join('<br>')).join('<br>');
+  return h + `</div>${loi ? `<div class="sm" style="margin:-4px 0 6px;color:var(--bad)">${loi}</div>` : ''}`;
+}
+function hoiTaiThieu() {
+  const TH = D.phan_tich.thieu; let tong = 0, giay = 0;
+  const dong = Object.entries(TH.shops).filter(([, x]) => x.so).map(([vt, x]) => {
+    if (x.loi_dn) return `• ${esc(vt)}: ${x.so} file — bỏ qua, đang lỗi đăng nhập`;
+    tong += x.so;
+    const sp = Object.values(x.sp_co).reduce((a, ms) => a + ms.length, 0), loi = Object.values(x.loi).reduce((a, ms) => a + Object.keys(ms).length, 0);
+    const ngoaiSP = Object.entries(x.thieu).filter(([m]) => m !== 'SP').reduce((a, [, ds]) => a + ds.length, 0);
+    const nSP = x.co_sp ? ngoaiSP : 0; giay += nSP * 3 + (x.so - nSP) * 25;
+    const ct = Object.entries(x.thieu).map(([m, ds]) => `${m} ${gomNgay(ds)}`).join(' · ');
+    return `• ${esc(vt)}: ${x.so} file (${esc(ct)}): ` + (x.co_sp ? 'thử SharePoint trước' + (sp ? ` (☁ đang có ${sp})` : '') + ', còn thiếu tải từ sàn' : 'tải từ sàn')
+      + (loi ? ` · ${loi} file lần trước lỗi, thử lại` : '');
+  });
+  lenh('cap_nhat_thieu', {}, `<b>Tải đủ ${tong} file thiếu?</b><div class="sm" style="margin-top:6px">${dong.join('<br>')}</div>
+    <div class="sm" style="margin-top:6px">Máy chạy cửa sổ ẩn, khoảng ${Math.max(1, Math.round(giay / 60))} phút: ① lấy từ SharePoint, ② còn thiếu mới tải từ sàn. File đã có giữ nguyên, không xoá. Up SharePoint và ghi Teams theo cài đặt trên app.</div>`,
+    () => { nhanh(); ve(); }, 'Tải đủ');
+}
+function veThieu() {
+  const P = D.phan_tich, TH = P && P.thieu;
+  if (!TH) return '';                                   // app cũ (chưa có v43): ẩn khối
+  if (TH.loi) return `<div class="c"><h4><span>Data 7 ngày</span></h4><div class="sm" style="color:var(--bad)">Không kiểm được: ${esc(TH.loi)}</div></div>`;
+  const SH = Object.keys(TH.shops), tong = TH.tong || 0, DT = TH.dang_tai, L = lenhThieu();
+  const choMay = L && ['chờ','đã nhận','đang làm'].indexOf(L.tt) >= 0;
+  const ky = TH.ngay_tinh.length ? (TH.ngay_tinh.length === 1 ? 'ngày ' + nn5(TH.ngay_tinh[0]) : TH.ngay_tinh.length + ' ngày ' + nn5(TH.ngay_tinh[0]) + '–' + nn5(TH.ngay_tinh[TH.ngay_tinh.length - 1])) : 'chưa có ngày đã qua';
+  const chua = TH.ngay_tinh.length < TH.ngay.length ? ' · trước 7h30 chưa tính ngày hôm qua' : '';
+  const con = TH.con_lam || SH.filter(vt => TH.shops[vt].so && !TH.shops[vt].loi_dn);
+  const dn = SH.filter(vt => TH.shops[vt].so && TH.shops[vt].loi_dn);
+  let cls, tieu, chi;
+  if (DT) {
+    cls = 'do';
+    tieu = DT.giai_doan === 'kiem' ? '⟳ Máy đang kiểm data 7 ngày…' : `⟳ Đang tải đủ file · còn ${DT.con == null ? '?' : DT.con}/${DT.tong == null ? '?' : DT.tong}`;
+    chi = esc(DT.mo_ta || '');
+  } else if (!tong) { cls = 'xa'; tieu = '✓ Đủ data'; chi = `${SH.length} shop · ${ky} · đủ 7 loại file mọi ngày.`; }
+  else if (!con.length) { cls = 'vg'; tieu = `⚠ Thiếu ${tong} file`;
+    chi = `Phần còn thiếu chỉ ở ${esc(dn.join(', '))}, mà shop này đang lỗi đăng nhập. Mở app trên máy, Đăng nhập lại ${esc(dn.join(', '))} trước rồi bấm Tải đủ.`; }
+  else { cls = 'do'; tieu = `⚠ Thiếu ${tong} file`; chi = `${SH.length} shop · ${ky}${chua}`; }
+  const dong = !tong ? `<div class="sm" style="margin-top:6px">${SH.map(esc).join(' · ')} ✓</div>` : SH.map(vt => {
+    const x = TH.shops[vt];
+    if (!x.so) return `<div class="sh"><span class="k">${esc(vt)}</span><span class="sm">—</span><span class="chip">✓ đủ</span></div>`;
+    const mo = Object.entries(x.thieu).map(([m, ds]) => `${m} ${gomNgay(ds)}`).join(' · ');
+    const dangS = DT && DT.viec && DT.viec[vt];
+    const chip = x.loi_dn ? `<span class="chip b">${x.so} file · lỗi đăng nhập</span>` : `<span class="chip ${dangS ? 'w' : 'b'}">${dangS ? 'đang tải ' : 'thiếu '}${x.so}</span>`;
+    return `<details ${S.moTh[vt] ? 'open' : ''} ontoggle="S.moTh['${esc(vt)}']=this.open"><summary class="sh"><span class="k">${esc(vt)} ▸</span><span class="sm">${esc(mo)}</span>${chip}</summary>${veLuoiTh(TH, vt, x)}</details>`;
+  }).join('');
+  const pct = DT && DT.tong ? Math.max(4, Math.round((DT.tong - (DT.con || 0)) / DT.tong * 100)) : 8;
+  const nut = !tong && !DT ? '' : DT || choMay
+    ? `${DT ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}<div class="btns"><button disabled>⟳ ${DT ? 'Đang tải…' : 'Máy đã nhận lệnh…'}</button></div>`
+    : `<div class="btns"><button class="x" ${con.length ? '' : 'disabled'} onclick="hoiTaiThieu()">⟳ Tải đủ file thiếu</button>${!con.length ? `<button onclick="go('kn')">🔌 Xem Kết nối</button>` : ''}</div>`;
+  const tl = L ? `<div class="sm" style="margin-top:4px">Lệnh ${esc(L.ma.slice(0, 8))} · ${esc((TT_LENH[L.tt] || [L.tt])[0])}${L.xong ? ' ' + esc(String(L.xong).slice(11, 16)) : ''}${L.kq ? ' · ' + esc(L.kq) : ''} · ghi cả ở Sổ lệnh</div>` : '';
+  return `<div class="c dth"><h4><span>Data 7 ngày</span><span class="sm">kiểm lúc ${esc(TH.luc_kiem || '')}</span></h4>
+    <div class="bt ${cls}"><b class="t">${tieu}</b><span class="sm">${chi}</span></div>
+    ${dong}${tong ? '<div class="sm" style="margin-top:4px">Bấm tên shop xem lưới · Xanh có file · Đỏ thiếu · ☁ SharePoint có · Nâu lỗi · Vàng sọc đang tải</div>' : ''}
+    <div style="margin-top:8px">${nut}</div>${tl}</div>`;
+}
 function vePTTuan() {
   const P = D.phan_tich; if (!P || P.loi) return loiKhoi(P);
   const SH = Object.keys(P.shops); if (!SH.length) return '<div class="trong">Chưa tick shop nào.</div>';
@@ -364,7 +474,7 @@ function vePTTuan() {
     return `<tr><td>${esc(s)}</td><td>${fk(r.ht)}</td><td>${so(r.nh)}</td><td>${pc(r.nh, r.ht)}</td><td>${so(r.don)}</td><td>${pc(r.don, r.nh)}</td><td>${tr(r.gmv)}</td><td>${tr(r.dt)}</td><td>${tr(r.cp)}</td></tr>`; }).join('');
   const ct = SH.map(s => { const x = P.shops[s], T = x.tuan, T0 = x.tuan_truoc;
     return `<details class="c"><summary><div class="row"><b>${esc(s)}</b><span class="num">${tr(T.gmv)} tr ${dl(T.gmv, T0.gmv)}</span></div></summary>
-    <div class="kv"><span>GMV tuần / kỳ trước</span><span>${tr(T.gmv)} / ${tr(T0.gmv)}</span><span>DT thuần</span><span>${tr(T.dt_thuan)} ${dl(T.dt_thuan, T0.dt_thuan)}</span>
+    <div class="kv"><span>GMV kỳ này / kỳ trước</span><span>${tr(T.gmv)} / ${tr(T0.gmv)}</span><span>DT thuần</span><span>${tr(T.dt_thuan)} ${dl(T.dt_thuan, T0.dt_thuan)}</span>
     <span>Chi phí QC</span><span>${tr(T.cp)} ${dl(T.cp, T0.cp)}</span><span>ROI (DT thuần / CP)</span><span>${T.cp && T.dt_thuan != null ? r2(T.dt_thuan / T.cp) : '—'} (trước ${T0.cp && T0.dt_thuan != null ? r2(T0.dt_thuan / T0.cp) : '—'})</span>
     <span>Đơn SKU</span><span>${so(T.don_sku)} ${dl(T.don_sku, T0.don_sku)}</span><span>Khớp SharePoint</span><span>${x.khop ? x.khop[0] + '/' + x.khop[1] + ' ngày' : '—'}</span></div>
     <div class="sub">GMV theo kênh (tr · đơn)</div><div class="kv">${x.kenh.map(k => `<span>${esc(k[0])}</span><span>${tr(k[1])} · ${so(k[2])}</span>`).join('')}</div>
@@ -372,12 +482,19 @@ function vePTTuan() {
     <div class="sub">Chiến dịch chi nhiều nhất (CP · đơn · DT)</div><div class="kv">${x.qc.map(k => `<span>${esc(k[0])}</span><span>${tr(k[1])} · ${so(k[2])} · ${tr(k[3])}</span>`).join('') || '<span>—</span><span></span>'}</div>
     <div class="row" style="margin-top:8px"><span class="chip ${x.canh_bao.do ? 'b' : x.canh_bao.vang ? 'w' : ''}">${x.canh_bao.do ? x.canh_bao.do + ' đỏ · ' : ''}${x.canh_bao.vang ? x.canh_bao.vang + ' cảnh báo vàng' : (x.canh_bao.do ? '' : 'Không cảnh báo')}</span>${x.thieu_quyen_qc ? '<span class="chip w">Thiếu quyền QC</span>' : ''}</div>
     ${x.canh_bao.dong.length ? `<div class="sm" style="margin-top:4px">${x.canh_bao.dong.map(esc).join('<br>')}</div>` : ''}</details>`; }).join('');
-  return `<div class="c"><h4><span>GMV theo ngày · ${esc(P.nhan)}</span><span class="sm">tr đồng</span></h4>
+  // v43: 7 ngày gần nhất tới hôm qua; Chủ nhật chữ đỏ; ngày thiếu F1 (shop nào) → "⚠ thiếu" dưới cột
+  const TH = P.thieu && !P.thieu.loi ? P.thieu : null, bay = P.so_ngay;
+  const f1 = d => TH ? Object.keys(TH.shops).filter(s => (TH.shops[s].thieu.F1 || []).indexOf(d) >= 0) : [];
+  const canhF1 = NG.map(d => [d, f1(d)]).filter(x => x[1].length);
+  return `<div class="c"><h4><span>GMV theo ngày · ${bay ? bay + ' ngày ' : ''}${esc(P.nhan)}</span><span class="sm">tr đồng</span></h4>
    <div class="bv" style="${cols}">${tot.map(v => `<span>${tr(v)}</span>`).join('')}</div>
    <div class="bars" style="${cols}">${bars}</div>
-   <div class="bl" style="${cols}">${NG.map(d => `<span>${nn(d)}</span>`).join('')}</div>
+   <div class="bl" style="${cols}">${NG.map(d => `<span class="${laCN(d) ? 'cn' : ''}">${nn(d)}</span>`).join('')}</div>
+   ${canhF1.length ? `<div class="bl" style="${cols}">${NG.map(d => `<span class="dn">${f1(d).length ? '⚠ thiếu' : ''}</span>`).join('')}</div>` : ''}
    <div class="lg">${SH.map((s, k) => `<span><i style="background:var(--s${k % 6 + 1})"></i>${esc(s)}</span>`).join('')}</div>
-   <div class="row" style="margin-top:6px"><span class="sm">Kỳ này ${tr(wg)} tr · kỳ trước (${esc(P.nhan_truoc)}) ${tr(wg0)} tr</span>${dl(wg, wg0)}</div></div>
+   <div class="row" style="margin-top:6px"><span class="sm">Kỳ này ${tr(wg)} tr · ${bay ? bay + ' ngày trước' : 'kỳ trước'} (${esc(P.nhan_truoc)}) ${tr(wg0)} tr</span>${dl(wg, wg0)}</div>
+   ${canhF1.length ? `<div class="sm dn" style="margin-top:2px">${canhF1.map(([d, ss]) => `⚠ ${nn(d)} chưa có F1 của ${esc(ss.join(', '))}`).join('<br>')} — GMV các ngày này đang thiếu.</div>` : ''}</div>
+  ${veThieu()}
   <div class="c"><h4><span>Phễu traffic · ${nn(NG[i])}</span></h4>
    <div class="fn"><div style="width:100%"><span>Hiển thị</span><b>${so(t.ht)}</b></div><div class="fr">CTR ${pc(t.nh, t.ht)}</div>
     <div style="width:80%"><span>Nhấp</span><b>${so(t.nh)}</b></div><div class="fr">CTOR ${pc(t.don, t.nh)}</div>
