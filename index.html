@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vận hành sàn</title>
 <style>
-/* Trang điện thoại app Lấy data ngày Sàn TMĐT (v21; v43: GMV 7 ngày gần nhất + Data 7 ngày + ⟳ Tải đủ file thiếu) — 5 menu đáy: Phân tích · Quảng cáo · Hộp thư · Sổ lệnh · Kết nối */
+/* Trang điện thoại app Lấy data ngày Sàn TMĐT (v21; v43: GMV 7 ngày gần nhất + Data 7 ngày + ⟳ Tải đủ file thiếu; v45: báo thiếu số liệu đầu tab + chú thích từng mục) — 5 menu đáy: Phân tích · Quảng cáo · Hộp thư · Sổ lệnh · Kết nối */
 :root{--bg:#f3f5f2;--card:#fff;--line:#dde3dd;--fg:#1d2a20;--mut:#5f6d62;--acc:#15803d;--acc-soft:#e3f2e8;--ok:#15803d;
  --warn:#b7791f;--warn-soft:#fdf3dc;--bad:#c0392b;--bad-soft:#fbe5e2;--gray:#8a948c;
  --s1:#15803d;--s2:#5fb67f;--s3:#b9dcc4;--s4:#0f5a2b;--s5:#8fcca4;--s6:#dcefe2;
@@ -139,6 +139,20 @@ textarea{font:inherit;font-size:14px;width:100%;min-height:72px;border:1px solid
 .lw .o.n{background:var(--line)}
 .prog{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:2px 0 6px}
 .prog i{display:block;height:100%;background:var(--acc)}
+/* v45 · báo thiếu số liệu (demo_dt_bao_thieu_so_lieu_v45.html) */
+.bang{border-radius:10px;padding:9px 11px;background:var(--warn-soft);border:1px solid var(--warn);display:flex;flex-direction:column;gap:5px}
+.bang.do{background:var(--bad-soft);border-color:var(--bad)}
+.bang .t{font-weight:700;font-size:14px;color:var(--warn)}
+.bang.do .t{color:var(--bad)}
+.bang ul{margin:0;padding-left:18px;font-size:12.5px}
+.bang li{margin:2px 0}
+.kok{color:var(--ok)}.kw{color:var(--warn)}.kb{color:var(--bad)}
+.kpi4 div.wn{border-color:var(--warn)}
+.kpi4 small.n{display:block;font-size:11px;margin-top:2px;line-height:1.3}
+sup.t{color:var(--warn);font-weight:700;font-size:9.5px;margin-left:1px}
+.kb sup.t{color:var(--bad)}
+.bar.thieu{outline:2px dashed var(--bad);outline-offset:1px}
+.bar.thieu.sel{outline-style:solid}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
@@ -324,6 +338,109 @@ function tinhTC() {
       S.tc = {tu: tu, den: den, tt: k.tt, kq: k.kq, d: k.tt === 'xong' ? d : null}; ve(); });
   });
 }
+/* ===== v45 · báo thiếu số liệu: băng đầu tab + chú thích 4 ô, bảng, biểu đồ. App cũ (không có khoá thieu) → không hiện ===== */
+function dsThieu(ds) {      // [[vt, [iso…]]…] → "LXLV 15/11, NDLP 13–15/11 + 2 shop"
+  const c = ds.filter(x => x[1] && x[1].length);
+  const h = c.slice(0, 3).map(([vt, d]) => esc(vt) + ' ' + gomNgay(d)).join(', ');
+  return h + (c.length > 3 ? ` + ${c.length - 3} shop` : '');
+}
+function thieuKy(sh) {      // gộp khoá v45 của các shop đang lọc → null khi app cũ
+  const E = Object.entries(sh || {}).filter(([vt, s]) => (S.shop === 'Tất cả' || vt === S.shop) && !s.loi_shop);
+  if (!E.length || !E.some(([, s]) => s.thieu)) return null;
+  const T = {n:0, tot:0, g:0, d:0, c:0, g0:0, d0:0, c0:0, roi:0, f:0, f0:0, co0:false, sh:E.length, kqq:[], G:[], Dd:[], C:[], G0:[]};
+  E.forEach(([vt, s]) => {
+    const th = s.thieu || {gmv:[], dt:[], cp:[]}, t0 = s.thieu0;
+    T.n = Math.max(T.n, s.so_ngay_tinh || 0); T.tot += s.so_ngay_tinh || 0;
+    T.g += th.gmv.length; T.d += th.dt.length; T.c += th.cp.length; T.roi += s.ngay_roi || 0; T.f += s.so_file || 0;
+    T.G.push([vt, th.gmv]); T.Dd.push([vt, th.dt]); T.C.push([vt, th.cp]);
+    if (s.khong_quyen_qc) T.kqq.push(vt);
+    if (t0) { T.co0 = true; T.g0 += t0.gmv.length; T.d0 += t0.dt.length; T.c0 += t0.cp.length; T.f0 += s.so_file0 || 0; T.G0.push([vt, t0.gmv]); }
+  });
+  if (!E.some(([, s]) => 'so_file' in s)) { T.f = T.g + T.d + T.c; T.f0 = T.g0 + T.d0 + T.c0; }   // dự phòng: đếm ngày thiếu
+  T.co = T.g + T.d + T.c > 0 || T.g0 + T.d0 + T.c0 > 0;
+  T.totC = T.tot - T.kqq.reduce((a, vt) => a + ((sh[vt] || {}).so_ngay_tinh || 0), 0);   // ngày-shop phải có CP
+  return T;
+}
+function trongKy7(Kk) {     // kỳ nằm trong 7 ngày của khối Data 7 ngày → dùng được nút Tải đủ file thiếu
+  const TH = D.phan_tich && D.phan_tich.thieu;
+  if (!TH || TH.loi || !TH.ngay || !TH.ngay.length || !Kk || !Kk.tu) return false;
+  return Kk.tu >= TH.ngay[0] && Kk.den <= TH.ngay[TH.ngay.length - 1];
+}
+function nutBang(Kk) {
+  const TH = D.phan_tich && D.phan_tich.thieu, coTH = !!(TH && !TH.loi);
+  const L = lenhThieu(), choMay = (L && ['chờ','đã nhận','đang làm'].indexOf(L.tt) >= 0) || (coTH && TH.dang_tai);
+  const con = coTH ? (TH.con_lam || Object.keys(TH.shops).filter(vt => TH.shops[vt].so && !TH.shops[vt].loi_dn)) : [];
+  let h = '';
+  if (coTH && TH.tong && trongKy7(Kk)) h += choMay ? `<button disabled>⟳ ${TH.dang_tai ? 'Đang tải…' : 'Máy đã nhận lệnh…'}</button>`
+    : `<button class="x" ${con.length ? '' : 'disabled'} onclick="hoiTaiThieu()">⟳ Tải đủ file thiếu</button>`;
+  if (coTH) h += `<button onclick="xemDth()">Xem chi tiết ↓</button>`;
+  return h ? `<div class="btns">${h}</div>` : '';
+}
+function xemDth() { const e = document.getElementById('dth'); if (e) e.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+function bangKy(T, K) {
+  if (!T || !T.co) return '';
+  const li = [], nhan0 = K.k && K.k.nhan0 ? esc(K.k.nhan0) : 'kỳ trước';
+  const tatCa = S.shop === 'Tất cả' ? ` cả ${T.sh} shop` : '';
+  if (!T.g && !T.d) li.push(`<b>GMV, DT thuần</b>: <span class="kok">đủ ${T.n}/${T.n} ngày</span>${tatCa}`);
+  else {
+    if (T.g) li.push(`<b>GMV</b>: thiếu F1 ${dsThieu(T.G)} (${T.g}/${T.tot} ngày-shop) → GMV <b class="kb">thấp hơn thực</b>`);
+    else li.push(`<b>GMV</b>: <span class="kok">đủ ${T.n}/${T.n} ngày</span>${tatCa}`);
+    if (T.d) li.push(`<b>DT thuần</b>: thiếu F2 ${dsThieu(T.Dd)} (${T.d}/${T.tot} ngày-shop) → DT thuần <b class="kw">thấp hơn thực</b>`);
+    else li.push(`<b>DT thuần</b>: <span class="kok">đủ ${T.n}/${T.n} ngày</span>`);
+  }
+  const itShop = T.C.filter(x => x[1].length).length <= 2;
+  if (T.c) li.push(`<b>Chi phí QC</b>: thiếu F3/F4 <b>${T.c}/${T.totC} ngày-shop</b>${itShop ? ' (' + dsThieu(T.C) + ')' : ''} → CP đang <b class="kw">thấp hơn thực</b>`);
+  else if (T.totC) li.push(`<b>Chi phí QC</b>: <span class="kok">đủ ${T.n}/${T.n} ngày</span>`);
+  if (T.kqq.length) li.push(`<b>${esc(T.kqq.join(', '))}</b> thiếu quyền Quảng cáo → không có CP, không tính là thiếu`);
+  if (T.roi < T.tot) li.push(`<b>ROI</b>: chỉ tính ${T.roi}/${T.tot} ngày-shop đủ file chi phí (F3 + F4) và DT thuần`);
+  if (T.co0 && T.g0) li.push(`<b>So kỳ trước</b> (${nhan0}): thiếu F1 ${dsThieu(T.G0)} → <b class="kb">% tăng/giảm không chính xác</b>`);
+  else if (T.co0 && (T.d0 || T.c0)) li.push(`<b>So kỳ trước</b> (${nhan0}): thiếu ${T.f0} file${T.d0 ? ' F2' : ''}${T.c0 ? ' F3/F4' : ''} → % ${T.d0 ? 'DT thuần, ' : ''}${T.c0 ? 'CP, ROI ' : ''}chưa chắc`);
+  else if (T.co0) li.push(`<b>So kỳ trước</b> (${nhan0}): <span class="kok">đủ file</span>`);
+  const doo = T.g || T.g0, tieu = T.f ? `Số kỳ này chưa đủ · thiếu ${T.f} file F1–F4` : `Kỳ trước chưa đủ · thiếu ${T.f0} file F1–F4`;
+  return `<div class="bang${doo ? ' do' : ''}"><div class="t">${doo ? '⛔' : '⚠'} ${tieu}</div><ul>${li.map(x => '<li>' + x + '</li>').join('')}</ul>${nutBang(K.k)}</div>`;
+}
+const TEN_RT = {gmv:'GMV', dt:'DT thuần', cp:'chi phí QC', huy:'số hủy đơn'};
+function thieuRT(sh) {      // ⚡ Hôm nay: shop nào máy chưa đọc được số nào (khoá thieu_rt v45)
+  const E = Object.entries(sh || {}).filter(([vt]) => S.shop === 'Tất cả' || vt === S.shop);
+  if (!E.some(([, s]) => s.thieu_rt)) return null;
+  const T = {sh:E.length, loi:[], gmv:[], dt:[], cp:[], roi:[]};
+  E.forEach(([vt, s]) => {
+    if (s.loi_shop) { T.loi.push(vt); ['gmv','dt','cp','roi'].forEach(k => T[k].push(vt)); return; }
+    const x = s.thieu_rt || [];
+    if (x.indexOf('gmv') >= 0) T.gmv.push(vt);
+    if (x.indexOf('dt') >= 0 || x.indexOf('huy') >= 0) T.dt.push(vt);
+    if (x.indexOf('cp') >= 0) T.cp.push(vt);
+    if (x.indexOf('dt') >= 0 || x.indexOf('cp') >= 0 || x.indexOf('huy') >= 0) T.roi.push(vt);
+  });
+  T.co = T.loi.length || T.gmv.length || T.dt.length || T.cp.length; return T;
+}
+function bangRT(T, sh) {
+  if (!T || !T.co) return '';
+  const li = [];
+  Object.entries(sh).forEach(([vt, s]) => {
+    if (S.shop !== 'Tất cả' && vt !== S.shop) return;
+    if (s.loi_shop) { li.push(`<b>${esc(vt)}</b> lỗi khi đọc (${esc(s.loi_shop)}) → <b>mọi số tổng chưa gồm ${esc(vt)}</b>`); return; }
+    const x = s.thieu_rt || []; if (!x.length) return;
+    const ah = [];
+    if (x.indexOf('gmv') >= 0) ah.push('GMV');
+    if (x.indexOf('dt') >= 0 || x.indexOf('huy') >= 0) ah.push('DT thuần');
+    if (x.indexOf('cp') >= 0) ah.push('chi phí QC');
+    if (ah.indexOf('DT thuần') >= 0 || ah.indexOf('chi phí QC') >= 0) ah.push('ROI');
+    li.push(`<b>${esc(vt)}</b> chưa đọc được ${x.map(k => TEN_RT[k] || k).join(', ')} → <b>${ah.join(', ')} tổng chưa gồm ${esc(vt)}</b>${x.indexOf('gmv') < 0 ? ' (GMV thì có)' : ''}`);
+  });
+  const doo = T.gmv.length || T.loi.length;
+  return `<div class="bang${doo ? ' do' : ''}"><div class="t">${doo ? '⛔' : '⚠'} Số hôm nay chưa đủ</div><ul>${li.map(x => '<li>' + x + '</li>').join('')}</ul>
+    <div class="btns"><button class="x" onclick="lamMoiRT()" ${S.rtCho ? 'disabled' : ''}>${S.rtCho ? 'Máy đang chạy…' : '⟳ Làm mới'}</button></div></div>`;
+}
+const nGhi = (cls, txt) => `<small class="n ${cls}">${txt}</small>`;
+function ghiRT(T, ds) {     // dòng nhỏ dưới ô KPI Hôm nay
+  const co = T.sh - ds.length;
+  return ds.length ? nGhi('kw', `⚠ ${co}/${T.sh} shop · thiếu ${esc(ds.slice(0, 2).join(', '))}${ds.length > 2 ? '…' : ''}`) : nGhi('kok', `đủ ${T.sh}/${T.sh} shop`);
+}
+function oT(v, n, tong) {   // ô bảng từng shop: số + số mũ ngày thiếu; đỏ khi thiếu ≥ nửa kỳ
+  if (!n) return `<td>${v}</td>`;
+  return `<td class="${tong && n * 2 >= tong ? 'kb' : 'kw'}">${v}<sup class="t">${n}</sup></td>`;
+}
 function veKy() {
   const hq = D.ky && D.ky.hom_qua ? D.ky.hom_qua : G.bay_gio.slice(0, 10);
   let h = `<div class="filt">${KY.map(([k, v]) => `<button class="${S.ky === k ? 'on' : ''}" onclick="chonKy('${k}')">${v}</button>`).join('')}</div>`;
@@ -348,18 +465,51 @@ function veKy() {
     if (K.R.chua_co) return h + '<div class="c sm">Hôm nay máy chưa chạy realtime. Bấm ⟳ Làm mới (07:00–22:00).</div>';
   }
   const gc = rt ? (S.shop === 'Tất cả' ? dl(t.gmv, K.R.cung_gio).replace('</i>', ' so cùng giờ hôm qua</i>') : '') : dl(t.gmv, t.gmv0);
+  // v45: băng đầu tab + dòng nhỏ dưới 4 ô (chỉ khi máy gửi khoá thiếu — app cũ giữ như trước)
+  const TK = rt ? null : thieuKy(K.shops), TR = rt ? thieuRT(K.shops) : null;
+  const n = {g:'', d:'', c:'', r:'', wg:'', wd:'', wc:'', wr:''}, WN = ' class="wn"';
+  if (TK) {
+    const du = `đủ ${TK.n}/${TK.n} ngày`;
+    n.g = TK.g ? nGhi('kb', `⚠ thiếu ${TK.g}/${TK.tot} ngày-shop · thấp hơn thực${TK.g0 ? ', kỳ trước thiếu ' + TK.g0 : ''}`)
+      : TK.g0 ? nGhi('kb', `${du} · kỳ trước thiếu ${TK.g0} ngày-shop → % chưa chính xác`) : nGhi('kok', du);
+    n.d = TK.d ? nGhi(TK.d * 2 >= TK.tot ? 'kb' : 'kw', `⚠ thiếu ${TK.d}/${TK.tot} ngày-shop · thấp hơn thực`) : nGhi('kok', du);
+    n.c = TK.c ? nGhi(TK.c * 2 >= TK.totC ? 'kb' : 'kw', `⚠ thiếu ${TK.c}/${TK.totC} ngày-shop · thấp hơn thực`) : TK.totC ? nGhi('kok', du) : nGhi('kw', 'thiếu quyền QC');
+    n.r = TK.roi < TK.tot ? nGhi(TK.roi * 2 < TK.tot ? 'kb' : 'kw', `⚠ chỉ tính ${TK.roi}/${TK.tot} ngày-shop đủ CP`) : nGhi('kok', du);
+    n.wg = TK.g || TK.g0 ? WN : ''; n.wd = TK.d ? WN : ''; n.wc = TK.c ? WN : ''; n.wr = TK.roi < TK.tot ? WN : '';
+    h += bangKy(TK, K);
+  } else if (TR) {
+    n.g = ghiRT(TR, TR.gmv); n.d = ghiRT(TR, TR.dt); n.c = ghiRT(TR, TR.cp);
+    n.r = TR.roi.length ? nGhi('kw', `⚠ ${TR.sh - TR.roi.length}/${TR.sh} shop · bỏ ${esc(TR.roi.slice(0, 2).join(', '))}${TR.roi.length > 2 ? '…' : ''}`) : nGhi('kok', `đủ ${TR.sh}/${TR.sh} shop`);
+    n.wg = TR.gmv.length ? WN : ''; n.wd = TR.dt.length ? WN : ''; n.wc = TR.cp.length ? WN : ''; n.wr = TR.roi.length ? WN : '';
+    h += bangRT(TR, K.shops);
+  }
   h += `<div class="kpi4">
-   <div><span>GMV ${rt ? 'hôm nay' : esc(K.nhan)}</span><b>${tr(t.gmv)}</b><i class="sm">tr</i>${gc}</div>
-   <div><span>DT thuần ${rt ? '(GMV − hủy, tạm tính)' : '(sau hủy, hoàn)'}</span><b>${tr(t.dt)}</b><i class="sm">tr</i>${rt ? '' : dl(t.dt, t.dt0)}</div>
-   <div><span>Chi phí QC</span><b>${t.coCp ? tr(t.cp) : '—'}</b><i class="sm">tr</i>${!rt && t.coCp && t.coCp0 ? dl(t.cp, t.cp0) : ''}</div>
-   <div><span>ROI (DT thuần / CP)</span><b>${t.roi ? r2(t.roi) : '—'}</b>${!rt && t.roi0 ? `<i class="sm">trước ${r2(t.roi0)}</i>` : ''}</div></div>
+   <div${n.wg}><span>GMV ${rt ? 'hôm nay' : esc(K.nhan)}</span><b>${tr(t.gmv)}</b><i class="sm">tr</i>${gc}${n.g}</div>
+   <div${n.wd}><span>DT thuần ${rt ? '(GMV − hủy, tạm tính)' : '(sau hủy, hoàn)'}</span><b>${tr(t.dt)}</b><i class="sm">tr</i>${rt ? '' : dl(t.dt, t.dt0)}${n.d}</div>
+   <div${n.wc}><span>Chi phí QC</span><b>${t.coCp ? tr(t.cp) : '—'}</b><i class="sm">tr</i>${!rt && t.coCp && t.coCp0 ? dl(t.cp, t.cp0) : ''}${n.c}</div>
+   <div${n.wr}><span>ROI (DT thuần / CP)</span><b>${t.roi ? r2(t.roi) : '—'}</b>${!rt && t.roi0 ? `<i class="sm">trước ${r2(t.roi0)}</i>` : ''}${n.r}</div></div>
    ${t.thieu.length ? `<div class="sm">CP, ROI chưa gồm ${esc(t.thieu.join(', '))} (thiếu quyền Quảng cáo / chưa có file chi phí).</div>` : ''}
    ${t.loi.length ? `<div class="sm" style="color:var(--warn)">${esc(t.loi.join(' · '))}</div>` : ''}
    ${!rt && K.k && K.k.nhan0 ? `<div class="sm">So kỳ trước ${esc(K.k.nhan0)}</div>` : ''}`;
-  const rows = Object.entries(K.shops).map(([vt, s]) => s.loi_shop ? `<tr><td>${esc(vt)}</td><td colspan="${rt ? 5 : 4}" style="text-align:left;color:var(--warn)">${esc(s.loi_shop)}</td></tr>` :
-    `<tr><td>${esc(vt)}</td><td>${tr(s.gmv)}</td><td>${tr(s.dt)}</td><td>${s.cp == null ? '—' : tr(s.cp)}</td><td>${rt ? (s.cp && s.dt != null ? r2(s.dt / s.cp) : '—') : (s.cpr ? r2(s.dtr / s.cpr) : '—')}</td>${rt ? `<td>${so(s.don_huy)}/${so(s.don_tao)}</td>` : ''}</tr>`).join('');
+  const CC = '<span class="kw">chưa có</span>', cc = (s, k) => (s.thieu_rt || []).indexOf(k) >= 0;   // v45: máy chưa đọc được ≠ số 0
+  let coSao = false, coMu = false;
+  const rows = Object.entries(K.shops).map(([vt, s]) => {
+    if (s.loi_shop) return `<tr><td>${esc(vt)}</td><td colspan="${rt ? 5 : 4}" style="text-align:left;color:var(--warn)">${esc(s.loi_shop)}</td></tr>`;
+    if (rt) {
+      const huy = s.don_huy == null && cc(s, 'huy') ? CC : `${so(s.don_huy)}/${so(s.don_tao)}`;
+      return `<tr><td>${esc(vt)}</td><td>${s.gmv == null && cc(s, 'gmv') ? CC : tr(s.gmv)}</td><td>${s.dt == null && (cc(s, 'dt') || cc(s, 'huy')) ? CC : tr(s.dt)}</td>`
+        + `<td>${s.cp == null && cc(s, 'cp') ? CC : s.cp == null ? '—' : tr(s.cp)}</td><td${s.thieu_rt && !(s.cp && s.dt != null) ? ' class="kw"' : ''}>${s.cp && s.dt != null ? r2(s.dt / s.cp) : '—'}</td><td>${huy}</td></tr>`;
+    }
+    const th = s.thieu, N = s.so_ngay_tinh || 0, roi = s.cpr ? r2(s.dtr / s.cpr) : '—';
+    if (!th) return `<tr><td>${esc(vt)}</td><td>${tr(s.gmv)}</td><td>${tr(s.dt)}</td><td>${s.cp == null ? '—' : tr(s.cp)}</td><td>${roi}</td></tr>`;
+    if (th.gmv.length || th.dt.length || th.cp.length) coMu = true;
+    const sao = !!(s.cpr && N && (s.ngay_roi || 0) * 2 < N); if (sao) coSao = true;
+    return `<tr><td>${esc(vt)}</td>${oT(tr(s.gmv), th.gmv.length, N)}${oT(tr(s.dt), th.dt.length, N)}${s.khong_quyen_qc ? '<td class="kw">QC</td>' : oT(s.cp == null ? '—' : tr(s.cp), th.cp.length, N)}<td${sao ? ' class="kw"' : ''}>${roi}${sao ? '*' : ''}</td></tr>`;
+  }).join('');
+  const ghiBang = rt ? (TR && TR.co ? `<div class="sm" style="margin-top:4px">${CC} = máy chưa đọc được số này (khác với 0)</div>` : '')
+    : TK && (coMu || coSao || TK.kqq.length) ? `<div class="sm" style="margin-top:4px">Số mũ = số ngày thiếu file, số đang thấp hơn thực (vd CP<sup class="t">2</sup> = thiếu file chi phí 2 ngày) · <span class="kb">đỏ</span> = thiếu ≥ nửa kỳ${coSao ? ' · * ROI tính trên chưa tới nửa số ngày' : ''}${TK.kqq.length ? ' · QC = thiếu quyền Quảng cáo' : ''}</div>` : '';
   h += `<div class="c"><h4><span>Từng shop · ${esc(K.nhan)}</span><span class="sm">tr đồng</span></h4><div class="tb"><table>
-    <tr><th>Shop</th><th>GMV</th><th>DT thuần</th><th>CP QC</th><th>ROI</th>${rt ? '<th>Hủy/đơn</th>' : ''}</tr>${rows}</table></div></div>`;
+    <tr><th>Shop</th><th>GMV</th><th>DT thuần</th><th>CP QC</th><th>ROI</th>${rt ? '<th>Hủy/đơn</th>' : ''}</tr>${rows}</table></div>${ghiBang}</div>`;
   const ds = topKy(K.top);
   h += `<div class="c"><h4><span>Top 10 sản phẩm · ${esc(K.nhan)}</span><span class="sm">${S.shop === 'Tất cả' ? 'gộp shop' : esc(S.shop)}</span></h4>
    <div class="thead"><span>Xếp theo</span>${[['gmv','GMV'],['don','Đơn'],['ctr','CTR'],['cd','CĐ']].map(([k, v]) => `<button class="${S.xep === k ? 'on' : ''}" onclick="S.xep='${k}';S.mo=-1;ve()">${v}</button>`).join('')}</div>
@@ -451,7 +601,7 @@ function veThieu() {
     ? `${DT ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}<div class="btns"><button disabled>⟳ ${DT ? 'Đang tải…' : 'Máy đã nhận lệnh…'}</button></div>`
     : `<div class="btns"><button class="x" ${con.length ? '' : 'disabled'} onclick="hoiTaiThieu()">⟳ Tải đủ file thiếu</button>${!con.length ? `<button onclick="go('kn')">🔌 Xem Kết nối</button>` : ''}</div>`;
   const tl = L ? `<div class="sm" style="margin-top:4px">Lệnh ${esc(L.ma.slice(0, 8))} · ${esc((TT_LENH[L.tt] || [L.tt])[0])}${L.xong ? ' ' + esc(String(L.xong).slice(11, 16)) : ''}${L.kq ? ' · ' + esc(L.kq) : ''} · ghi cả ở Sổ lệnh</div>` : '';
-  return `<div class="c dth"><h4><span>Data 7 ngày</span><span class="sm">kiểm lúc ${esc(TH.luc_kiem || '')}</span></h4>
+  return `<div class="c dth" id="dth"><h4><span>Data 7 ngày</span><span class="sm">kiểm lúc ${esc(TH.luc_kiem || '')}</span></h4>
     <div class="bt ${cls}"><b class="t">${tieu}</b><span class="sm">${chi}</span></div>
     ${dong}${tong ? '<div class="sm" style="margin-top:4px">Bấm tên shop xem lưới · Xanh có file · Đỏ thiếu · ☁ SharePoint có · Nâu lỗi · Vàng sọc đang tải</div>' : ''}
     <div style="margin-top:8px">${nut}</div>${tl}</div>`;
@@ -467,7 +617,9 @@ function vePTTuan() {
   const i = S.ngay, t = tong(i), t0 = tong(i - 1), roi = t.cp ? t.gmv / t.cp : null, roi0 = t0.cp ? t0.gmv / t0.cp : null;
   const tot = NG.map((_, j) => tong(j).gmv), mx = Math.max(...tot, 1), cols = `grid-template-columns:repeat(${NG.length},1fr)`;
   const nn = d => d.slice(8,10) + '/' + d.slice(5,7);
-  const bars = NG.map((d, j) => `<div class="bar${j === i ? ' sel' : ''}" onclick="S.ngay=${j};ve()" style="height:${tot[j] / mx * 100}%">${
+  const V45 = SH.some(s => P.shops[s].thieu);   // v45: viền đỏ / chip / kỳ trước chỉ khi máy gửi khoá thiếu mới
+  const TH0 = V45 && P.thieu && !P.thieu.loi ? P.thieu : null, f1b = d => TH0 ? Object.keys(TH0.shops).filter(s => (TH0.shops[s].thieu.F1 || []).indexOf(d) >= 0) : [];
+  const bars = NG.map((d, j) => `<div class="bar${j === i ? ' sel' : ''}${f1b(d).length ? ' thieu' : ''}" onclick="S.ngay=${j};ve()" style="height:${tot[j] / mx * 100}%">${
       SH.map((s, k) => `<span style="flex:${P.shops[s].ngay[j].gmv || 0};background:var(--s${k % 6 + 1})"></span>`).join('')}</div>`).join('');
   const wg = SH.reduce((a, s) => a + (P.shops[s].tuan.gmv || 0), 0), wg0 = SH.reduce((a, s) => a + (P.shops[s].tuan_truoc.gmv || 0), 0);
   const rows = SH.map(s => { const r = P.shops[s].ngay[i];
@@ -475,7 +627,7 @@ function vePTTuan() {
   const ct = SH.map(s => { const x = P.shops[s], T = x.tuan, T0 = x.tuan_truoc;
     return `<details class="c"><summary><div class="row"><b>${esc(s)}</b><span class="num">${tr(T.gmv)} tr ${dl(T.gmv, T0.gmv)}</span></div></summary>
     <div class="kv"><span>GMV kỳ này / kỳ trước</span><span>${tr(T.gmv)} / ${tr(T0.gmv)}</span><span>DT thuần</span><span>${tr(T.dt_thuan)} ${dl(T.dt_thuan, T0.dt_thuan)}</span>
-    <span>Chi phí QC</span><span>${tr(T.cp)} ${dl(T.cp, T0.cp)}</span><span>ROI (DT thuần / CP)</span><span>${T.cp && T.dt_thuan != null ? r2(T.dt_thuan / T.cp) : '—'} (trước ${T0.cp && T0.dt_thuan != null ? r2(T0.dt_thuan / T0.cp) : '—'})</span>
+    <span>Chi phí QC</span><span>${tr(T.cp)} ${dl(T.cp, T0.cp)}</span><span>ROI (DT thuần / CP)</span><span>${'cpr' in x ? (x.cpr ? r2(x.dtr / x.cpr) : '—') : T.cp && T.dt_thuan != null ? r2(T.dt_thuan / T.cp) : '—'} (trước ${'cpr0' in x ? (x.cpr0 ? r2(x.dtr0 / x.cpr0) : '—') : T0.cp && T0.dt_thuan != null ? r2(T0.dt_thuan / T0.cp) : '—'})${x.thieu && x.so_ngay_tinh && x.ngay_roi < x.so_ngay_tinh ? ` <i class="sm kw">${x.ngay_roi}/${x.so_ngay_tinh} ngày</i>` : ''}</span>
     <span>Đơn SKU</span><span>${so(T.don_sku)} ${dl(T.don_sku, T0.don_sku)}</span><span>Khớp SharePoint</span><span>${x.khop ? x.khop[0] + '/' + x.khop[1] + ' ngày' : '—'}</span></div>
     <div class="sub">GMV theo kênh (tr · đơn)</div><div class="kv">${x.kenh.map(k => `<span>${esc(k[0])}</span><span>${tr(k[1])} · ${so(k[2])}</span>`).join('')}</div>
     <div class="sub">Top sản phẩm</div><div class="kv">${x.sp.map(k => `<span>${esc(k[0])}</span><span>${tr(k[1])} · ${so(k[2])}</span>`).join('') || '<span>—</span><span></span>'}</div>
@@ -486,14 +638,20 @@ function vePTTuan() {
   const TH = P.thieu && !P.thieu.loi ? P.thieu : null, bay = P.so_ngay;
   const f1 = d => TH ? Object.keys(TH.shops).filter(s => (TH.shops[s].thieu.F1 || []).indexOf(d) >= 0) : [];
   const canhF1 = NG.map(d => [d, f1(d)]).filter(x => x[1].length);
-  return `<div class="c"><h4><span>GMV theo ngày · ${bay ? bay + ' ngày ' : ''}${esc(P.nhan)}</span><span class="sm">tr đồng</span></h4>
+  // v45: chip đủ/thiếu + kỳ trước đủ F1 hay thiếu gì (khoá thieu0 của khối phan_tich)
+  const nF1 = TH ? Object.keys(TH.shops).reduce((a, s) => a + (TH.shops[s].thieu.F1 || []).length, 0) : 0, nT = TH ? TH.ngay_tinh.length : 0;
+  const chipG = V45 && TH && nT ? (nF1 ? `<span class="chip b">thiếu ${nF1} ngày-shop</span>` : `<span class="chip">đủ ${nT}/${nT} ngày</span>`) : '';
+  const co0 = SH.some(s => P.shops[s].thieu0), G0 = SH.map(s => [s, (P.shops[s].thieu0 || {}).gmv || []]).filter(x => x[1].length);
+  const ghi0 = !co0 ? '' : G0.length ? `<div class="sm"><span class="dn">Kỳ trước thiếu F1 ${dsThieu(G0)}</span> → ${tr(wg0)} tr thấp hơn thực, % so sánh chỉ để tham khảo</div>`
+    : `<div class="sm"><span class="up">${canhF1.length ? 'Kỳ trước đủ F1' : 'Cả 2 kỳ đủ F1'}</span></div>`;
+  return `<div class="c"><h4><span>GMV theo ngày · ${bay ? bay + ' ngày ' : ''}${esc(P.nhan)}</span><span class="chips">${chipG}<span class="sm">tr đồng</span></span></h4>
    <div class="bv" style="${cols}">${tot.map(v => `<span>${tr(v)}</span>`).join('')}</div>
    <div class="bars" style="${cols}">${bars}</div>
    <div class="bl" style="${cols}">${NG.map(d => `<span class="${laCN(d) ? 'cn' : ''}">${nn(d)}</span>`).join('')}</div>
    ${canhF1.length ? `<div class="bl" style="${cols}">${NG.map(d => `<span class="dn">${f1(d).length ? '⚠ thiếu' : ''}</span>`).join('')}</div>` : ''}
    <div class="lg">${SH.map((s, k) => `<span><i style="background:var(--s${k % 6 + 1})"></i>${esc(s)}</span>`).join('')}</div>
    <div class="row" style="margin-top:6px"><span class="sm">Kỳ này ${tr(wg)} tr · ${bay ? bay + ' ngày trước' : 'kỳ trước'} (${esc(P.nhan_truoc)}) ${tr(wg0)} tr</span>${dl(wg, wg0)}</div>
-   ${canhF1.length ? `<div class="sm dn" style="margin-top:2px">${canhF1.map(([d, ss]) => `⚠ ${nn(d)} chưa có F1 của ${esc(ss.join(', '))}`).join('<br>')} — GMV các ngày này đang thiếu.</div>` : ''}</div>
+   ${canhF1.length ? `<div class="sm dn" style="margin-top:2px">${canhF1.map(([d, ss]) => `⚠ ${nn(d)} chưa có F1 của ${esc(ss.join(', '))}`).join('<br>')} — GMV các ngày này đang thiếu.</div>${V45 ? `<div class="sm">Cột viền đỏ nét đứt = thiếu GMV ít nhất 1 shop · bấm cột xem shop nào</div>` : ''}` : ''}${ghi0}</div>
   ${veThieu()}
   <div class="c"><h4><span>Phễu traffic · ${nn(NG[i])}</span></h4>
    <div class="fn"><div style="width:100%"><span>Hiển thị</span><b>${so(t.ht)}</b></div><div class="fr">CTR ${pc(t.nh, t.ht)}</div>
